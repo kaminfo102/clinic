@@ -1,0 +1,106 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String?
+  phone        String?
+  password     String?
+  role         UserRole @default(USER)
+  avatar       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  appointments Appointment[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  duration    Int      // duration in minutes
+  price       Int?
+  image       String?
+  category    String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  appointments Appointment[]
+  timeSlots    TimeSlot[]
+}
+
+model Appointment {
+  id            String           @id @default(cuid())
+  userId        String
+  serviceId     String
+  timeSlotId    String?
+  date          String           // Persian date: "1403/01/15"
+  time          String           // Time: "10:30"
+  status        AppointmentStatus @default(PENDING)
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  service  Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  timeSlot TimeSlot? @relation(fields: [timeSlotId], references: [id], onDelete: SetNull)
+  
+  @@unique([userId, serviceId, date, time])
+}
+
+model TimeSlot {
+  id          String   @id @default(cuid())
+  date        String   // Persian date: "1403/01/15"
+  time        String   // Time: "10:30"
+  isAvailable Boolean  @default(true)
+  serviceId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  service     Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  appointments Appointment[]
+  
+  @@unique([date, time])
+}
+
+model WorkingHour {
+  id          String   @id @default(cuid())
+  dayOfWeek   Int      // 0=شنبه, 1=یکشنبه, ..., 5=جمعه
+  startTime   String   // "09:00"
+  endTime     String   // "20:00"
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@unique([dayOfWeek])
+}
